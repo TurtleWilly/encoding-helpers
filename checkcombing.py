@@ -23,10 +23,11 @@
 import sys
 import argparse
 import os
+import json
 from vapoursynth import core
 
 __author__  = 'Wilhelm/ JPTV Club'
-__version__ = '1.3'
+__version__ = '1.4'
 __all__     = []
 
 
@@ -38,7 +39,7 @@ ap = argparse.ArgumentParser(
 
 ap.add_argument('filename', help='a (typically interlaced) input video file to be scanned for combed frames.')
 ap.add_argument('-V', '--version',  action='version', help="show version number and exit", version='%(prog)s {}'.format(__version__), )
-ap.add_argument('-o', '--output', metavar='FILENAME', type=str, help='Writes detected frame ranges into a \'chapters\' file.')
+ap.add_argument('-o', '--output', metavar='BASE', type=str, help='filename base for all generated files. If omitted `filename\' is used by default.')
 ap.add_argument(      '--inverse', action='store_true', help="detect uncombed frame ranges instead combed ones.")
 ap.add_argument(      '--threshold', type=int, help='range merging threshold, default: 2', default=2)
 ap.add_argument(      '--min-range', type=int, help='minimum number of frames required for a range, default: 1', default=1)
@@ -109,22 +110,45 @@ for i, r in enumerate(myranges):
 print(spacer)
 print('{:,} frames detected as \'{}\', {:,} possible ranges computed.'.format(len(detected_frames), frametype, len(myranges)), sep='', file=sys.stderr)
 
-# Output chapter file
-if user_input.output:
-	ofn = os.path.realpath(os.path.expanduser(user_input.output))
-	with open(ofn, 'w') as fh:
-		for i, r in enumerate(myranges):
-			if len(r) >= user_input.min_range:
-				ms    = r[0] * (1000 / (clip.fps.numerator / clip.fps.denominator))
-				s, ms = divmod(ms, 1000)
-				m, s  = divmod(s,    60)
-				h, m  = divmod(m,    60)
-				print('CHAPTER{:02}={:02}:{:02}:{:02}.{:03}'.format(i+1, int(h), int(m), int(s), int(ms)), file=fh)
-				if len(r) > 1:
-					print('CHAPTER{:02}NAME={} frame range {:,}—{:,}'.format(i+1, frametype.capitalize(), r[0], r[-1]), file=fh)
-				else:
-					print('CHAPTER{:02}NAME={} frame #{:,}'.format(i+1, frametype.capitalize(), r[0]), file=fh)
-		print('Chapter file successfully written to <{}>.'.format(ofn), file=sys.stderr)
+
+outputbasefilename = os.path.realpath(os.path.expanduser(user_input.output)) if user_input.output else filename
+
+# Output a "Python-ready" debug info
+ofn = '{},combingcheck,info.py'.format(outputbasefilename)
+with open(ofn, 'w') as fh:
+	print('combed_ranges = [', file=fh)
+	for i, r in enumerate(myranges):
+		if len(r) >= user_input.min_range:
+			if len(r) > 1:     # multiple frames
+				rstr = '\'[{} {}]\','.format(r[0], r[-1])
+				print('\t{:<22}  # Range #{:>2}: {:,} frames of {:,} are are {}'.format(rstr, i, len(r), ((r[-1] - r[0]) + 1), frametype), file=fh)
+			elif len(r) == 1:  # single frame
+				rstr = '\'{}\','.format(r[0])
+				print('\t{:<22}  # Range #{:>2}: 1 {} frame'.format(rstr, i, frametype), file=fh)
+	print(']', file=fh)
+	print('>>> File with range information successfully written to <{}>.'.format(ofn), file=sys.stderr)
+
+# Output JSON file
+ofn = '{},combingcheck.json'.format(outputbasefilename)
+with open(ofn, 'w') as fh:
+	print(json.dumps(detected_frames, separators=(',', ':')), file=fh)
+	print('>>> JSON file successfully written to <{}>.'.format(ofn), file=sys.stderr)
+
+# Output chapters file
+ofn = '{},combingcheck,chapters.txt'.format(outputbasefilename)
+with open(ofn, 'w') as fh:
+	for i, r in enumerate(myranges):
+		if len(r) >= user_input.min_range:
+			ms    = r[0] * (1000 / (clip.fps.numerator / clip.fps.denominator))
+			s, ms = divmod(ms, 1000)
+			m, s  = divmod(s,    60)
+			h, m  = divmod(m,    60)
+			print('CHAPTER{:02}={:02}:{:02}:{:02}.{:03}'.format(i+1, int(h), int(m), int(s), int(ms)), file=fh)
+			if len(r) > 1:
+				print('CHAPTER{:02}NAME={} frame range {:,}—{:,}'.format(i+1, frametype.capitalize(), r[0], r[-1]), file=fh)
+			else:
+				print('CHAPTER{:02}NAME={} frame #{:,}'.format(i+1, frametype.capitalize(), r[0]), file=fh)
+	print('>>> Chapter file successfully written to <{}>.'.format(ofn), file=sys.stderr)
 
 
 print('All done.', file=sys.stderr)
