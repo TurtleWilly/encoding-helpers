@@ -1,2 +1,2 @@
 # encoding-helpers
-SImple helper scripts to deal with annoying tasks.
+Simple helper scripts to deal with annoying tasks.
