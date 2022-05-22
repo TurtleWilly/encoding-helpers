@@ -1,0 +1,58 @@
+#!/bin/bash
+
+#
+#  x264-safe
+#  Wrapper script around x264 which renames possibly exsiting (output) files before x264 automatically
+#  overwrites them.
+#
+#  Usage:
+#      Simply use 'x264-safe' instead 'x264'. :-)
+#
+#
+#  Quickly hacked together by Wilhelm/ JPTV.club and released in the Public Domain.
+#
+
+PARAMETERS=( "$@" )
+
+echo "[x264-safe] Executing safety checks…"
+
+while [[ $# -gt 0 ]]; do
+	case $1 in
+		-o|--output)
+			OUTPUT="$2"
+
+			if [ -z "${OUTPUT}" ]; then
+				echo "[x264-safe] No argument for parameter -o/--output."
+				exit 1
+			else
+				echo "[x264-safe] Checking if output file exists…"
+				if [ -s "${OUTPUT}" ]; then
+					echo -e "[x264-safe] \033[00;31mFile <${OUTPUT}> exists and is not empty. Renaming it to avoid x264 killing it.\033[0m"
+
+					DATE="$(date +'%Y%m%d%H%M%S')"
+					if [[ "${OUTPUT}" =~ \.(264|mkv|flv|mp4)$ ]]; then
+						echo "[x264-safe] One of the 4 supported file extensions/ formats detected."
+						NEWFILENAME="$(sed 's/\.\([^.]*\)$/,'"${DATE}"'.\1/' <<< "${OUTPUT}")"
+					else
+						echo "[x264-safe] \033[00;31mUnsupported file extension/ format detected.\033[0m"
+						NEWFILENAME="${OUTPUT},${DATE}.bak"
+					fi
+
+					echo "[x264-safe] Using <${NEWFILENAME}> as new filename for the backup."
+					mv "${OUTPUT}" "${NEWFILENAME}"
+				fi
+			fi
+
+			shift
+			shift
+			;;
+		*)
+			shift
+			;;
+	esac
+done
+
+echo "[x264-safe] Calling x264…"
+echo "[x264-safe] Using arguments: ${PARAMETERS[@]}"
+
+exec /usr/local/bin/x264 "${PARAMETERS[@]}"
