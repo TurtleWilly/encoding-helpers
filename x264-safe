@@ -2,7 +2,7 @@
 
 #
 #  x264-safe
-#  Wrapper script around x264 which renames possibly exsiting (output) files before x264 automatically
+#  Wrapper script around x264 which renames possibly existing (output) files before x264 automatically
 #  overwrites them.
 #
 #  Usage:
