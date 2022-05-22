@@ -34,7 +34,7 @@ while [[ $# -gt 0 ]]; do
 						echo "[x264-safe] One of the 4 supported file extensions/ formats detected."
 						NEWFILENAME="$(sed 's/\.\([^.]*\)$/,'"${DATE}"'.\1/' <<< "${OUTPUT}")"
 					else
-						echo "[x264-safe] \033[00;31mUnsupported file extension/ format detected.\033[0m"
+						echo -e "[x264-safe] \033[00;31mUnsupported file extension/ format detected.\033[0m"
 						NEWFILENAME="${OUTPUT},${DATE}.bak"
 					fi
 
